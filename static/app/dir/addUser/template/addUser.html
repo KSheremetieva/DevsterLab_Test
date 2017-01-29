@@ -1,0 +1,82 @@
+<h3 style="display: inline-block;">Add new user</h3>
+<button class="btn btn-default" style="position: relative; top: -5px; left: 10px" data-toggle="modal" data-target="#myModal"> <span class="glyphicon glyphicon-plus"></span> </button>
+
+<div id="myModal" class="modal fade" role="dialog">
+  <div class="modal-dialog">
+
+    <!-- Modal content-->
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h4 class="modal-title">Add User</h4>
+      </div>
+      <div class="modal-body">
+
+        <p>Fill the gaps.</p>
+  
+    <form name="userForm" novalidate>
+
+       <p>*Name:
+		<input name="myName" ng-model="newName" required>
+		<span ng-show="userForm.myName.$touched && userForm.myName.$invalid">The name is required.</span>
+		</p>
+
+		<p>*Username:
+		<input name="username" ng-model="newUsername" ng-minlength="2" mg-maxlength="9" required>
+		<span ng-show="userForm.username.$touched && userForm.username.$invalid">The username is required.</span>
+		</p>
+
+		<p>*Email:
+		<input name="email" ng-model="newEmail" ng-pattern="/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,4}$/" required>
+		<span ng-show="userForm.email.$touched && userForm.email.$invalid">The email is required.</span>
+		</p>
+
+		<p>*Phone:
+		<input name="phone" ng-model="newPhone" ng-pattern="/\d{10}/" ng-minlength="10" ng-maxlength="10" required>
+		<span ng-show="userForm.phone.$touched && userForm.phone.$invalid">The phone is not valid.</span>
+		</p>
+
+		<p>*Company Name:
+		<input name="compName" ng-model="newCompName" required>
+		<span ng-show="userForm.compName.$touched && userForm.compName.$invalid">The company name is required.</span>
+		</p>
+
+		<p>Street:
+		<input name="street" ng-model="newAddrStreet" >
+		</p>
+
+		<p>Suite:
+		<input name="suite" ng-model="newAddrSuite" >
+		</p>
+
+		<p>City:
+		<input name="suite" ng-model="newAddrCity" >
+		</p>
+
+		<p>Zip Code:
+		<input name="zipcode" ng-model="newAddrZipcode" >
+		</p>
+
+		<p>Website name:
+		<input name="siteName" ng-model="newWebsite" ng-pattern="/^([a-z0-9][a-z0-9\-]*\.)+[a-z0-9][a-z0-9\-]*$/">
+		<span ng-show="userForm.siteName.$touched && userForm.siteName.$invalid">The WebSite name is not valid.</span>
+		</p>
+
+		<p>Company Catch Phrase:
+		<input name="phrase" ng-model="newCompCPhrase" >
+		</p>
+
+		<p>Company BS:
+		<input name="bs" ng-model="newCompBS" >
+		</p>
+        
+        <div class="modal-footer">
+        <button type="submit" class="btn btn-success" ng-disabled="userForm.$invalid" data-dismiss="modal" ng-click="addUser(newName, newUsername, newEmail, newAddrStreet, newAddrSuite, newAddrCity, newAddrZipcode, newPhone, newWebsite, newCompName, newCompCPhrase, newCompBS )">Add</button>
+        </div>
+        
+    </form>
+
+    </div>
+
+  </div>
+</div>

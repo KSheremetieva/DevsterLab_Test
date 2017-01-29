@@ -1,0 +1,110 @@
+<table class="table table-hover" ng-cloak>
+    <thead ng-init="getData()">
+      <tr>
+    	<th>#</th>
+        <th>ID</th>
+        <th>
+            <a href="#" ng-click="sortType = 'name'; sortReverse = !sortReverse">
+             Name 
+            <span ng-show="sortType == 'name' && !sortReverse" class="glyphicon glyphicon-triangle-bottom"></span>
+            <span ng-show="sortType == 'name' && sortReverse" class="glyphicon glyphicon-triangle-top"></span>
+          </a>
+        </th>
+        <th>
+            <a href="#" ng-click="sortType = 'usern'; sortReverse = !sortReverse">
+             Username 
+            <span ng-show="sortType == 'usern' && !sortReverse" class="glyphicon glyphicon-triangle-bottom"></span>
+            <span ng-show="sortType == 'usern' && sortReverse" class="glyphicon glyphicon-triangle-top"></span>
+          </a>
+        </th>
+        <th>
+            <a href="#" ng-click="sortType = 'email'; sortReverse = !sortReverse">
+             Email
+            <span ng-show="sortType == 'email' && !sortReverse" class="glyphicon glyphicon-triangle-bottom"></span>
+            <span ng-show="sortType == 'email' && sortReverse" class="glyphicon glyphicon-triangle-top"></span>
+          </a>
+        </th>
+        <th>
+            <a href="#" ng-click="sortType = 'street'; sortReverse = !sortReverse">
+             Address
+            <span ng-show="sortType == 'street' && !sortReverse" class="glyphicon glyphicon-triangle-bottom"></span>
+            <span ng-show="sortType == 'street' && sortReverse" class="glyphicon glyphicon-triangle-top"></span>
+          </a>
+        </th>
+        <th>Phone</th>
+        <th>Website</th>
+        <th>
+            <a href="#" ng-click="sortType = 'company'; sortReverse = !sortReverse">
+             Company
+            <span ng-show="sortType == 'company' && !sortReverse" class="glyphicon glyphicon-triangle-bottom"></span>
+            <span ng-show="sortType == 'company' && sortReverse" class="glyphicon glyphicon-triangle-top"></span>
+          </a>
+        </th>
+        <th>Edit/Remove</th>
+      </tr>
+    </thead>
+
+<!-- TBODY -->
+    <tbody>
+      <tr ng-repeat="item in users | orderBy:sortType:sortReverse | filter:searchUser">
+        <td>
+        <!-- ng-bind-template="id:  {{item.id}} , {{index+1}}" -->
+             {{$index+1}}
+        </td>
+        <td>
+            ID: {{item.id}}
+        </td>
+        <td ng-repeat="(key, value) in item" ng-if="key == 'name'">
+        	<span editable-text="value" e-name="name" e-form="rowform">
+                    {{value}}
+            </span>
+        </td>
+        <td ng-repeat="(key, value) in item" ng-if="key == 'username'">
+        	<span editable-text="value" e-name="username" e-form="rowform">{{value}}</span>
+        <!-- ng-bind="value" -->
+        </td>
+        <td ng-repeat="(key, value) in item" ng-if="key == 'email'">
+        	<span editable-text="value" e-name="email" e-form="rowform" ng-bind="value" id="id{{item.id}}"></span>
+            <button ngclipboard data-clipboard-target="#id{{item.id}}" class="link-btn"><span class="glyphicon glyphicon-copy"></span></button>
+            <!-- ngclipboard data-clipboard-target="#id{{item.$index}}" -->
+            <!-- ng-click="cons(this.id)" -->
+        </td>
+        <td ng-repeat="(key, value) in item" ng-if="key == 'address'">
+        	<div ng-repeat="(name,info) in value">
+        		<div editable-text="value" e-name="address" ng-if="name!='geo'" e-form="rowform" ng-bind-template="&bull; {{name}}: {{info}}"></div>
+        	</div>
+        </td>
+        <td ng-repeat="(key, value) in item" ng-if="key == 'phone'">
+        	<span editable-text="value" e-name="phone" e-form="rowform" ng-bind="value"></span>
+        </td>
+        <td ng-repeat="(key, value) in item" ng-if="key == 'website'">
+        	<span editable-text="value" e-name="website" e-form="rowform" ng-bind="value"></span>
+        </td>
+        <td ng-repeat="(key, value) in item" ng-if="key == 'company'">
+        	<div ng-repeat="(name,info) in value">
+        		<div editable-text="value" e-name="company" e-form="rowform" ng-bind-template="&bull; {{name}}: {{info}}"></div>
+        	</div>
+        </td>
+        <td>
+        <!-- BUTTONS -->
+        	<!-- form -->
+	        <form editable-form name="rowform" ng-show="rowform.$visible" class="form-buttons form-inline" shown="ins == true">
+	        <!-- shown="inserted == user" -->
+	          <button type="submit" ng-disabled="rowform.$waiting" class="btn btn-primary">
+	          <!-- ng-click="saveChanges($index)" ? -->
+	            save
+	          </button>
+	          <button type="button" ng-disabled="rowform.$waiting" ng-click="rowform.$cancel()" class="btn btn-default">
+	            cancel
+	          </button>
+	        </form>
+	        <div class="buttons" ng-show="!rowform.$visible">
+	          <button type="button" class="btn btn-primary" ng-click="rowform.$show()">edit</button>
+	          <button type="button" class="btn btn-danger" ng-click="removeUser(item.id)">del</button>
+	        </div> 
+
+        </td>
+
+      </tr>
+    </tbody>
+  </table>
