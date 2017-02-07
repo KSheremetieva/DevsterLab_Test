@@ -1,2 +1,15 @@
+@font-face {
+  font-family: evolventa;
+  src: url(2437b1f8ff16d4bddb811f997834e5b0.ttf);
+}
+
+* {
+  font-family: evolventa;
+}
+
+.userList {
+  border: 1px solid #E1e1e1;
+}
+
 
 /*# sourceMappingURL=styles.css.map*/

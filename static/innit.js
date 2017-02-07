@@ -1,4 +1,5 @@
 import app from './app/app.js';
+import appRun from './app/appRun.js';
 import mainCtrl from './app/mainCtrl.js';
 // DIR
 import addUserDir from './app/dir/addUser/addUserDir.js';

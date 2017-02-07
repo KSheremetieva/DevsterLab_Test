@@ -51,19 +51,23 @@ var bundle =
 
 	var _app2 = _interopRequireDefault(_app);
 
-	var _mainCtrl = __webpack_require__(14);
+	var _appRun = __webpack_require__(15);
+
+	var _appRun2 = _interopRequireDefault(_appRun);
+
+	var _mainCtrl = __webpack_require__(16);
 
 	var _mainCtrl2 = _interopRequireDefault(_mainCtrl);
 
-	var _addUserDir = __webpack_require__(15);
+	var _addUserDir = __webpack_require__(17);
 
 	var _addUserDir2 = _interopRequireDefault(_addUserDir);
 
-	var _userListDir = __webpack_require__(17);
+	var _userListDir = __webpack_require__(19);
 
 	var _userListDir2 = _interopRequireDefault(_userListDir);
 
-	var _filterDir = __webpack_require__(19);
+	var _filterDir = __webpack_require__(21);
 
 	var _filterDir2 = _interopRequireDefault(_filterDir);
 
@@ -92,11 +96,15 @@ var bundle =
 
 	var _ngclipboard2 = _interopRequireDefault(_ngclipboard);
 
+	var _angularjsGeolocation = __webpack_require__(14);
+
+	var _angularjsGeolocation2 = _interopRequireDefault(_angularjsGeolocation);
+
 	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 	// import $ from 'jquery';
 
-	var app = _angular2.default.module("app", ['ngStorage', 'xeditable', 'ngclipboard']);
+	var app = _angular2.default.module("app", ['ngStorage', 'xeditable', 'ngclipboard', 'geolocation']);
 	exports.app = app;
 
 /***/ },
@@ -34170,75 +34178,136 @@ var bundle =
 
 /***/ },
 /* 14 */
+/***/ function(module, exports) {
+
+	'use strict';
+
+	angular.module('geolocation',[]).constant('geolocation_msgs', {
+	        'errors.location.unsupportedBrowser':'Browser does not support location services',
+	        'errors.location.permissionDenied':'You have rejected access to your location',
+	        'errors.location.positionUnavailable':'Unable to determine your location',
+	        'errors.location.timeout':'Service timeout has been reached'
+	});
+
+	angular.module('geolocation')
+	  .factory('geolocation', ['$q','$rootScope','$window','geolocation_msgs',function ($q,$rootScope,$window,geolocation_msgs) {
+	    return {
+	      getLocation: function (opts) {
+	        var deferred = $q.defer();
+	        if ($window.navigator && $window.navigator.geolocation) {
+	          $window.navigator.geolocation.getCurrentPosition(function(position){
+	            $rootScope.$apply(function(){deferred.resolve(position);});
+	          }, function(error) {
+	            switch (error.code) {
+	              case 1:
+	                $rootScope.$broadcast('error',geolocation_msgs['errors.location.permissionDenied']);
+	                $rootScope.$apply(function() {
+	                  deferred.reject(geolocation_msgs['errors.location.permissionDenied']);
+	                });
+	                break;
+	              case 2:
+	                $rootScope.$broadcast('error',geolocation_msgs['errors.location.positionUnavailable']);
+	                $rootScope.$apply(function() {
+	                  deferred.reject(geolocation_msgs['errors.location.positionUnavailable']);
+	                });
+	                break;
+	              case 3:
+	                $rootScope.$broadcast('error',geolocation_msgs['errors.location.timeout']);
+	                $rootScope.$apply(function() {
+	                  deferred.reject(geolocation_msgs['errors.location.timeout']);
+	                });
+	                break;
+	            }
+	          }, opts);
+	        }
+	        else
+	        {
+	          $rootScope.$broadcast('error',geolocation_msgs['errors.location.unsupportedBrowser']);
+	          $rootScope.$apply(function(){deferred.reject(geolocation_msgs['errors.location.unsupportedBrowser']);});
+	        }
+	        return deferred.promise;
+	      }
+	    };
+	}]);
+
+
+/***/ },
+/* 15 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
-	var _angular = __webpack_require__(2);
+	var _app = __webpack_require__(1);
 
-	var _angular2 = _interopRequireDefault(_angular);
+	_app.app.run(function (editableOptions) {
+	  editableOptions.theme = 'bs3'; // bootstrap3 theme. Can be also 'bs2', 'default'
+	});
+
+/***/ },
+/* 16 */
+/***/ function(module, exports, __webpack_require__) {
+
+	'use strict';
 
 	var _app = __webpack_require__(1);
 
-	function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+	_app.app.controller('mainCtrl', function ($scope, $localStorage, $sessionStorage, $filter, $http, geolocation) {
+		$scope.ifReopen = function () {
+			// if reopen
+			if (!!$localStorage.userList) {
+				$scope.users = $localStorage.userList;
+				$scope.myLat = $localStorage.myLatitude;
+				$scope.myLong = $localStorage.myLongitude;
+			} else {
+				// if first time
+				$http({
+					method: 'GET',
+					url: 'https://jsonplaceholder.typicode.com/users'
+				}).then(function success(response) {
+					$localStorage.userList = response.data;
+					$scope.users = $localStorage.userList;
+					console.log($localStorage.userList);
+				}, function error(response) {
+					console.log(response.statusText);
+				});
+				// GEO
+				$scope.R = 6371;
+				geolocation.getLocation().then(function (data) {
+					// $scope.coords = {lat:data.coords.latitude, long:data.coords.longitude};
+					$localStorage.myLatitude = data.coords.latitude;
+					$localStorage.myLongitude = data.coords.longitude;
+					$scope.myLat = $localStorage.myLatitude;
+					$scope.myLong = $localStorage.myLongitude;
+					$scope.getLoc = true;
 
-	_app.app.run(function (editableOptions) {
-		editableOptions.theme = 'bs3'; // bootstrap3 theme. Can be also 'bs2', 'default'
-	});
-	// import $ from 'jquery';
-
-
-	_app.app.controller('mainCtrl', function ($scope, $localStorage, $sessionStorage, $filter, $http) {
-		$scope.users;
-		$scope.show = 'userlist';
-		$scope.getData = function () {
-			$.ajax({
-				method: 'GET',
-				dataType: 'json',
-				url: 'https://jsonplaceholder.typicode.com/users'
-			}).done(function (request) {
-				return $scope.getInfo(request);
-			}).fail(function (request) {
-				return console.log('fail');
-			});
-		};
-		$scope.getInfo = function (request) {
-			$scope.users = $localStorage.user || request;
-			$localStorage.user = $scope.users;
-			console.log($localStorage.user);
-			$scope.$apply();
-		};
-
-		$scope.rowForm = true;
-		$scope.showBtn = function () {
-			$scope.rowForm = !$scope.rowForm;
-		};
-
-		// REMOVE USER
-		$scope.removeUser = function (index) {
-			console.log(index);
-			// $localStorage.user.splice(index, 1)
-			for (var i = 0; i < $localStorage.user.length; i++) {
-				if ($localStorage.user[i].id == index) {
-					$localStorage.user.splice(i, 1);
-				}
+					for (var i = 0; i < $localStorage.userList.length; i++) {
+						var usLat = $localStorage.userList[i].address.geo.lat;
+						var usLong = $localStorage.userList[i].address.geo.lng;
+						// console.log(usLat);
+						var d = Math.acos(Math.sin($scope.myLong) * Math.sin(usLong) + Math.cos($scope.myLong) * Math.cos(usLong) * Math.cos(usLat - $scope.myLat));
+						var L = Math.round(d * $scope.R);
+						$localStorage.userList[i].address.long = L;
+						$scope.longFlag = true;
+					}
+				});
 			}
+		};
+
+		// SORT BY
+		$scope.sortType = 'name';
+		$scope.sortReverse = false;
+		$scope.searchUser = '';
+		$scope.sortBy = function (arg) {
+			$scope.sortType = arg;
+			$scope.sortReverse = !$scope.sortReverse;
 		};
 
 		// ADD USER
 		$scope.addUser = function (newName, newUsername, newEmail, newAddrStreet, newAddrSuite, newAddrCity, newAddrZipcode, newPhone, newWebsite, newCompName, newCompCPhrase, newCompBS) {
-			$scope.allId = [];
-			for (var i = 0; i < $localStorage.user.length; i++) {
-				$scope.allId.push($localStorage.user[i].id);
-				console.log($scope.allId);
-			}
-			//определение мах id
-			$scope.maxId = Math.max.apply(null, $scope.allId);
-			$scope.newId = $scope.maxId + 1;
-			// console.log($scope.currentLength, $scope.maxId, $scope.newId)
-
+			// create currect id
+			$localStorage.maxId += 1;
 			$scope.newUser = {
-				id: $scope.newId,
+				id: $localStorage.maxId,
 				name: newName,
 				username: newUsername,
 				email: newEmail,
@@ -34255,27 +34324,113 @@ var bundle =
 					catchPhrase: newCompCPhrase,
 					bs: newCompBS
 				}
-			}, $localStorage.user.push($scope.newUser);
+			}, $localStorage.userList.push($scope.newUser);
 		};
 
-		// SORT TYPE
-		$scope.sortType = 'name'; // значение сортировки по умолчанию
-		$scope.sortReverse = false; // обратная сортривка
-		$scope.searchUser = ''; // значение поиска по умолчанию
+		// REMOVE USER
+		$scope.removeUser = function (arg) {
+			console.log(arg);
+			for (var i = 0; i < $localStorage.userList.length; i++) {
+				if ($localStorage.userList[i] == arg) {
+					$localStorage.userList.splice(i, 1);
+				}
+			}
+		};
 
+		// CHANGE USER INFO
+		$scope.checkSave = function (item, data, arg) {
+			console.log(item, data, arg);
+			if (arg == "username") {
+				for (var q = 0; q < $localStorage.userList.length; q++) {
+					// check
+					if ($localStorage.userList[q].username == data) {
+						return 'Username should be unique!';
+					} else if ($localStorage.userList[q].id == item.id) {
+						$localStorage.userList[q].username = data;
+						return;
+					}
+				}
+			}
+			for (var i = 1; i < $localStorage.userList.length; i++) {
+				// find item
+				if (item.id == $localStorage.userList[i].id) {
+					// if address/company changes
+					if (arg == "username" || arg == "city" || arg == "street" || arg == "suite" || arg == "companyName" || arg == "bs" || arg == "catchPhrase") {
+						switch (arg) {
+							case "username":
+								break;
+							// address
+							case "city":
+								$localStorage.userList[i].address.city = data;
+								break;
+							case "street":
+								$localStorage.userList[i].address.street = data;
+								break;
+							case "suite":
+								$localStorage.userList[i].address.suite = data;
+								break;
+							// company
+							case "companyName":
+								$localStorage.userList[i].company.name = data;
+								break;
+							case "bs":
+								$localStorage.userList[i].company.bs = data;
+								break;
+							case "catchPhrase":
+								$localStorage.userList[i].company.catchPhrase = data;
+								break;
+						}
+					} else {
+						$localStorage.userList[i].arg = data;
+					}
+				}
+			}
+		};
+
+		// MESSAGE
+		$scope.messageFlag = true;
+		$scope.message = function () {
+			if (!!$scope.messageFlag) {
+				$scope.messageFlag = false;
+				alert("All users have successfully downloaded");
+			};
+			// find max id
+			$sessionStorage.allId = [];
+			for (var i = 0; i < $localStorage.userList.length; i++) {
+				$sessionStorage.allId.push($localStorage.userList[i].id);
+			}
+			$localStorage.maxId = Math.max.apply(null, $sessionStorage.allId);
+		};
+
+		// UNIQUE USERNAME (IN ADD USER FORM)
+		// $scope.checkInp = true;
+		$scope.checkInput = function (val) {
+			console.log(val);
+			for (var i = 0; i < $localStorage.userList.length; i++) {
+				// console.log($localStorage.userList[i].username)
+				if ($localStorage.userList[i].username == val) {
+					alert("da");
+					$scope.checkInp = true;
+					// $scope.$apply();
+					console.log(val);
+				} else {
+					$scope.checkInp = false;
+				}
+			}
+		};
 		});
 
 /***/ },
-/* 15 */
+/* 17 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 	var _app = __webpack_require__(1);
 
-	__webpack_require__(14);
+	__webpack_require__(16);
 
-	var _addUser = __webpack_require__(16);
+	var _addUser = __webpack_require__(18);
 
 	var _addUser2 = _interopRequireDefault(_addUser);
 
@@ -34287,31 +34442,29 @@ var bundle =
 			replace: false,
 			controller: 'mainCtrl',
 			template: _addUser2.default,
-			link: function link(scope, element, attributes) {
-				scope.b = 'addUser';
-			}
+			link: function link(scope, element, attributes) {}
 		};
 		});
 
 /***/ },
-/* 16 */
+/* 18 */
 /***/ function(module, exports) {
 
-	module.exports = "<h3 style=\"display: inline-block;\">Add new user</h3>\n<button class=\"btn btn-default\" style=\"position: relative; top: -5px; left: 10px\" data-toggle=\"modal\" data-target=\"#myModal\"> <span class=\"glyphicon glyphicon-plus\"></span> </button>\n\n<div id=\"myModal\" class=\"modal fade\" role=\"dialog\">\n  <div class=\"modal-dialog\">\n\n    <!-- Modal content-->\n    <div class=\"modal-content\">\n      <div class=\"modal-header\">\n        <button type=\"button\" class=\"close\" data-dismiss=\"modal\">&times;</button>\n        <h4 class=\"modal-title\">Add User</h4>\n      </div>\n      <div class=\"modal-body\">\n\n        <p>Fill the gaps.</p>\n  \n    <form name=\"userForm\" novalidate>\n\n       <p>*Name:\n\t\t<input name=\"myName\" ng-model=\"newName\" required>\n\t\t<span ng-show=\"userForm.myName.$touched && userForm.myName.$invalid\">The name is required.</span>\n\t\t</p>\n\n\t\t<p>*Username:\n\t\t<input name=\"username\" ng-model=\"newUsername\" ng-minlength=\"2\" mg-maxlength=\"9\" required>\n\t\t<span ng-show=\"userForm.username.$touched && userForm.username.$invalid\">The username is required.</span>\n\t\t</p>\n\n\t\t<p>*Email:\n\t\t<input name=\"email\" ng-model=\"newEmail\" ng-pattern=\"/^[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,4}$/\" required>\n\t\t<span ng-show=\"userForm.email.$touched && userForm.email.$invalid\">The email is required.</span>\n\t\t</p>\n\n\t\t<p>*Phone:\n\t\t<input name=\"phone\" ng-model=\"newPhone\" ng-pattern=\"/\\d{10}/\" ng-minlength=\"10\" ng-maxlength=\"10\" required>\n\t\t<span ng-show=\"userForm.phone.$touched && userForm.phone.$invalid\">The phone is not valid.</span>\n\t\t</p>\n\n\t\t<p>*Company Name:\n\t\t<input name=\"compName\" ng-model=\"newCompName\" required>\n\t\t<span ng-show=\"userForm.compName.$touched && userForm.compName.$invalid\">The company name is required.</span>\n\t\t</p>\n\n\t\t<p>Street:\n\t\t<input name=\"street\" ng-model=\"newAddrStreet\" >\n\t\t</p>\n\n\t\t<p>Suite:\n\t\t<input name=\"suite\" ng-model=\"newAddrSuite\" >\n\t\t</p>\n\n\t\t<p>City:\n\t\t<input name=\"suite\" ng-model=\"newAddrCity\" >\n\t\t</p>\n\n\t\t<p>Zip Code:\n\t\t<input name=\"zipcode\" ng-model=\"newAddrZipcode\" >\n\t\t</p>\n\n\t\t<p>Website name:\n\t\t<input name=\"siteName\" ng-model=\"newWebsite\" ng-pattern=\"/^([a-z0-9][a-z0-9\\-]*\\.)+[a-z0-9][a-z0-9\\-]*$/\">\n\t\t<span ng-show=\"userForm.siteName.$touched && userForm.siteName.$invalid\">The WebSite name is not valid.</span>\n\t\t</p>\n\n\t\t<p>Company Catch Phrase:\n\t\t<input name=\"phrase\" ng-model=\"newCompCPhrase\" >\n\t\t</p>\n\n\t\t<p>Company BS:\n\t\t<input name=\"bs\" ng-model=\"newCompBS\" >\n\t\t</p>\n        \n        <div class=\"modal-footer\">\n        <button type=\"submit\" class=\"btn btn-success\" ng-disabled=\"userForm.$invalid\" data-dismiss=\"modal\" ng-click=\"addUser(newName, newUsername, newEmail, newAddrStreet, newAddrSuite, newAddrCity, newAddrZipcode, newPhone, newWebsite, newCompName, newCompCPhrase, newCompBS )\">Add</button>\n        </div>\n        \n    </form>\n\n    </div>\n\n  </div>\n</div>";
+	module.exports = "<h3 style=\"display: inline-block;\">Add new user</h3>\n<button class=\"btn btn-success\" style=\"position: relative; top: -5px; left: 10px\" data-toggle=\"modal\" data-target=\"#myModal\"> <span class=\"glyphicon glyphicon-plus\"></span> </button>\n\n<!-- MODAL -->\n\n<div id=\"myModal\" class=\"modal fade\" role=\"dialog\">\n  <div class=\"modal-dialog\">\n\n    <!-- Modal content-->\n    <div class=\"modal-content\">\n      <div class=\"modal-header\">\n        <button type=\"button\" class=\"close\" data-dismiss=\"modal\">&times;</button>\n        <h4 class=\"modal-title\">Add User</h4>\n      </div>\n      <div class=\"modal-body\">\n\n        <p>Fill the gaps.</p>\n  \n    <form name=\"userForm\" novalidate>\n\n       <p>*Name:\n\t\t\t<input class=\"form-control\" name=\"myName\" ng-model=\"newName\" required>\n\t\t\t<span class=\"text-danger\" ng-show=\"userForm.myName.$touched && userForm.myName.$invalid\">The name is required.</span>\n\t\t</p>\n\n\t\t<p>*Username:\n\t\t\t<input ng-change=\"checkInput(newUsername)\" class=\"form-control\" name=\"username\" ng-model=\"newUsername\" ng-minlength=\"2\" mg-maxlength=\"9\" required>\n\t\t\t<span class=\"text-danger\" ng-if=\"userForm.username.$touched && userForm.username.$invalid\">The username is required and should be unique.</span>\n\t\t\t<span class=\"text-danger\" ng-if=\"!!checkInp\">The username is required and should be unique.</span>\n\n\t\t</p>\n\n\t\t<p>*Email:\n\t\t\t<input class=\"form-control\" name=\"email\" ng-model=\"newEmail\" ng-pattern=\"/^[a-z0-9._%+-]+@[a-z0-9.-]+\\.[a-z]{2,4}$/\" required>\n\t\t\t<span class=\"text-danger\" ng-show=\"userForm.email.$touched && userForm.email.$invalid\">The email is required.</span>\n\t\t</p>\n\n\t\t<p>*Phone:\n\t\t\t<input class=\"form-control\" name=\"phone\" ng-model=\"newPhone\" ng-pattern=\"/\\d{10}/\" ng-minlength=\"10\" ng-maxlength=\"10\" required>\n\t\t\t<span class=\"text-danger\" ng-show=\"userForm.phone.$touched && userForm.phone.$invalid\">The phone is not valid.</span>\n\t\t</p>\n\n\t\t<p>*Company Name:\n\t\t\t<input class=\"form-control\" name=\"compName\" ng-model=\"newCompName\" required>\n\t\t\t<span class=\"text-danger\" ng-show=\"userForm.compName.$touched && userForm.compName.$invalid\">The company name is required.</span>\n\t\t</p>\n\n\t\t<p>Street:\n\t\t\t<input class=\"form-control\" name=\"street\" ng-model=\"newAddrStreet\" >\n\t\t</p>\n\n\t\t<p>Suite:\n\t\t\t<input class=\"form-control\" name=\"suite\" ng-model=\"newAddrSuite\" >\n\t\t</p>\n\n\t\t<p>City:\n\t\t\t<input class=\"form-control\" name=\"suite\" ng-model=\"newAddrCity\" >\n\t\t</p>\n\n\t\t<p>Zip Code:\n\t\t\t<input class=\"form-control\" name=\"zipcode\" ng-model=\"newAddrZipcode\" >\n\t\t</p>\n\n\t\t<p>Website name:\n\t\t\t<input class=\"form-control\" name=\"siteName\" ng-model=\"newWebsite\" ng-pattern=\"/^([a-z0-9][a-z0-9\\-]*\\.)+[a-z0-9][a-z0-9\\-]*$/\">\n\t\t\t<span class=\"text-danger\" ng-show=\"userForm.siteName.$touched && userForm.siteName.$invalid\">The WebSite name is not valid.</span>\n\t\t</p>\n\n\t\t<p>Company Catch Phrase:\n\t\t\t<input class=\"form-control\" name=\"phrase\" ng-model=\"newCompCPhrase\" >\n\t\t</p>\n\n\t\t<p>Company BS:\n\t\t\t<input class=\"form-control\" name=\"bs\" ng-model=\"newCompBS\" >\n\t\t</p>\n        \n        <div class=\"modal-footer\">\n        \t<button type=\"submit\" class=\"btn btn-success\" ng-disabled=\"userForm.$invalid\" data-dismiss=\"modal\" ng-click=\"addUser(newName, newUsername, newEmail, newAddrStreet, newAddrSuite, newAddrCity, newAddrZipcode, newPhone, newWebsite, newCompName, newCompCPhrase, newCompBS )\">Add</button>\n        </div>\n        \n    </form>\n\n    </div>\n\n  </div>\n</div>";
 
 /***/ },
-/* 17 */
+/* 19 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 	var _app = __webpack_require__(1);
 
-	var _mainCtrl = __webpack_require__(14);
+	var _mainCtrl = __webpack_require__(16);
 
 	var _mainCtrl2 = _interopRequireDefault(_mainCtrl);
 
-	var _userList = __webpack_require__(18);
+	var _userList = __webpack_require__(20);
 
 	var _userList2 = _interopRequireDefault(_userList);
 
@@ -34323,31 +34476,29 @@ var bundle =
 			replace: false,
 			controller: 'mainCtrl',
 			template: _userList2.default,
-			link: function link(scope, element, attributes) {
-				scope.c = 'userList';
-			}
+			link: function link(scope, element, attributes) {}
 		};
 		});
 
 /***/ },
-/* 18 */
+/* 20 */
 /***/ function(module, exports) {
 
-	module.exports = "<table class=\"table table-hover\" ng-cloak>\n    <thead ng-init=\"getData()\">\n      <tr>\n    \t<th>#</th>\n        <th>ID</th>\n        <th>\n            <a href=\"#\" ng-click=\"sortType = 'name'; sortReverse = !sortReverse\">\n             Name \n            <span ng-show=\"sortType == 'name' && !sortReverse\" class=\"glyphicon glyphicon-triangle-bottom\"></span>\n            <span ng-show=\"sortType == 'name' && sortReverse\" class=\"glyphicon glyphicon-triangle-top\"></span>\n          </a>\n        </th>\n        <th>\n            <a href=\"#\" ng-click=\"sortType = 'usern'; sortReverse = !sortReverse\">\n             Username \n            <span ng-show=\"sortType == 'usern' && !sortReverse\" class=\"glyphicon glyphicon-triangle-bottom\"></span>\n            <span ng-show=\"sortType == 'usern' && sortReverse\" class=\"glyphicon glyphicon-triangle-top\"></span>\n          </a>\n        </th>\n        <th>\n            <a href=\"#\" ng-click=\"sortType = 'email'; sortReverse = !sortReverse\">\n             Email\n            <span ng-show=\"sortType == 'email' && !sortReverse\" class=\"glyphicon glyphicon-triangle-bottom\"></span>\n            <span ng-show=\"sortType == 'email' && sortReverse\" class=\"glyphicon glyphicon-triangle-top\"></span>\n          </a>\n        </th>\n        <th>\n            <a href=\"#\" ng-click=\"sortType = 'street'; sortReverse = !sortReverse\">\n             Address\n            <span ng-show=\"sortType == 'street' && !sortReverse\" class=\"glyphicon glyphicon-triangle-bottom\"></span>\n            <span ng-show=\"sortType == 'street' && sortReverse\" class=\"glyphicon glyphicon-triangle-top\"></span>\n          </a>\n        </th>\n        <th>Phone</th>\n        <th>Website</th>\n        <th>\n            <a href=\"#\" ng-click=\"sortType = 'company'; sortReverse = !sortReverse\">\n             Company\n            <span ng-show=\"sortType == 'company' && !sortReverse\" class=\"glyphicon glyphicon-triangle-bottom\"></span>\n            <span ng-show=\"sortType == 'company' && sortReverse\" class=\"glyphicon glyphicon-triangle-top\"></span>\n          </a>\n        </th>\n        <th>Edit/Remove</th>\n      </tr>\n    </thead>\n\n<!-- TBODY -->\n    <tbody>\n      <tr ng-repeat=\"item in users | orderBy:sortType:sortReverse | filter:searchUser\">\n        <td>\n        <!-- ng-bind-template=\"id:  {{item.id}} , {{index+1}}\" -->\n             {{$index+1}}\n        </td>\n        <td>\n            ID: {{item.id}}\n        </td>\n        <td ng-repeat=\"(key, value) in item\" ng-if=\"key == 'name'\">\n        \t<span editable-text=\"value\" e-name=\"name\" e-form=\"rowform\">\n                    {{value}}\n            </span>\n        </td>\n        <td ng-repeat=\"(key, value) in item\" ng-if=\"key == 'username'\">\n        \t<span editable-text=\"value\" e-name=\"username\" e-form=\"rowform\">{{value}}</span>\n        <!-- ng-bind=\"value\" -->\n        </td>\n        <td ng-repeat=\"(key, value) in item\" ng-if=\"key == 'email'\">\n        \t<span editable-text=\"value\" e-name=\"email\" e-form=\"rowform\" ng-bind=\"value\" id=\"id{{item.id}}\"></span>\n            <button ngclipboard data-clipboard-target=\"#id{{item.id}}\" class=\"link-btn\"><span class=\"glyphicon glyphicon-copy\"></span></button>\n            <!-- ngclipboard data-clipboard-target=\"#id{{item.$index}}\" -->\n            <!-- ng-click=\"cons(this.id)\" -->\n        </td>\n        <td ng-repeat=\"(key, value) in item\" ng-if=\"key == 'address'\">\n        \t<div ng-repeat=\"(name,info) in value\">\n        \t\t<div editable-text=\"value\" e-name=\"address\" ng-if=\"name!='geo'\" e-form=\"rowform\" ng-bind-template=\"&bull; {{name}}: {{info}}\"></div>\n        \t</div>\n        </td>\n        <td ng-repeat=\"(key, value) in item\" ng-if=\"key == 'phone'\">\n        \t<span editable-text=\"value\" e-name=\"phone\" e-form=\"rowform\" ng-bind=\"value\"></span>\n        </td>\n        <td ng-repeat=\"(key, value) in item\" ng-if=\"key == 'website'\">\n        \t<span editable-text=\"value\" e-name=\"website\" e-form=\"rowform\" ng-bind=\"value\"></span>\n        </td>\n        <td ng-repeat=\"(key, value) in item\" ng-if=\"key == 'company'\">\n        \t<div ng-repeat=\"(name,info) in value\">\n        \t\t<div editable-text=\"value\" e-name=\"company\" e-form=\"rowform\" ng-bind-template=\"&bull; {{name}}: {{info}}\"></div>\n        \t</div>\n        </td>\n        <td>\n        <!-- BUTTONS -->\n        \t<!-- form -->\n\t        <form editable-form name=\"rowform\" ng-show=\"rowform.$visible\" class=\"form-buttons form-inline\" shown=\"ins == true\">\n\t        <!-- shown=\"inserted == user\" -->\n\t          <button type=\"submit\" ng-disabled=\"rowform.$waiting\" class=\"btn btn-primary\">\n\t          <!-- ng-click=\"saveChanges($index)\" ? -->\n\t            save\n\t          </button>\n\t          <button type=\"button\" ng-disabled=\"rowform.$waiting\" ng-click=\"rowform.$cancel()\" class=\"btn btn-default\">\n\t            cancel\n\t          </button>\n\t        </form>\n\t        <div class=\"buttons\" ng-show=\"!rowform.$visible\">\n\t          <button type=\"button\" class=\"btn btn-primary\" ng-click=\"rowform.$show()\">edit</button>\n\t          <button type=\"button\" class=\"btn btn-danger\" ng-click=\"removeUser(item.id)\">del</button>\n\t        </div> \n\n        </td>\n\n      </tr>\n    </tbody>\n  </table>\n   <!-- <button class=\"btn btn-default\" ng-click=\"addUser()\">Add row</button> -->";
+	module.exports = "{{coords}}\n<!-- {{d}} -->\n\n<h1>{{myLatitude}} {{myLongitude}}</h1>\n<h1>{{L}}</h1>\n<table class=\"table table-hover\">\n    <thead>\n      <tr>\n        <th>#</th>\n        <th>ID</th>\n        <th ng-click=\"sortBy('name')\" class=\"text-muted\">Name\n            <span class=\"glyphicon glyphicon-chevron-up\" ng-if=\"(sortType == 'name') && (!!sortReverse)\"></span>\n            <span class=\"glyphicon glyphicon-chevron-down\" ng-if=\"(sortType == 'name') && (!sortReverse)\"></span>\n        </th>\n        <th ng-click=\"sortBy('username')\" class=\"text-muted\">UserName\n            <span class=\"glyphicon glyphicon-chevron-up\" ng-if=\"(sortType == 'username') && (!!sortReverse)\"></span>\n            <span class=\"glyphicon glyphicon-chevron-down\" ng-if=\"(sortType == 'username') && (!sortReverse)\"></span>\n        </th>\n        <th ng-click=\"sortBy('email')\" class=\"text-muted\">Email\n            <span class=\"glyphicon glyphicon-chevron-up\" ng-if=\"(sortType == 'email') && (!!sortReverse)\"></span>\n            <span class=\"glyphicon glyphicon-chevron-down\" ng-if=\"(sortType == 'email') && (!sortReverse)\"></span>\n        </th>\n        <th ng-click=\"sortBy('addrStreet')\" class=\"text-muted\">Address\n            <span class=\"glyphicon glyphicon-chevron-up\" ng-if=\"(sortType == 'addrStreet') && (!!sortReverse)\"></span>\n            <span class=\"glyphicon glyphicon-chevron-down\" ng-if=\"(sortType == 'addrStreet') && (!sortReverse)\"></span>\n        </th>\n        <th>Phone</th>\n        <th>Website</th>\n        <th ng-click=\"sortBy('compName')\" class=\"text-muted\">Company\n            <span class=\"glyphicon glyphicon-chevron-up\" ng-if=\"(sortType == 'compName') && (!!sortReverse)\"></span>\n            <span class=\"glyphicon glyphicon-chevron-down\" ng-if=\"(sortType == 'compName') && (!sortReverse)\"></span>\n        </th>\n        <th>Remove</th>\n      </tr>\n    </thead>\n<!-- TBODY -->\n    <tbody>\n      <tr ng-repeat-start=\"item in users | orderBy:sortType:sortReverse | filter:searchUser\">\n        <td>\n            {{$index+1}}\n        </td>\n        <!-- id -->\n        <td ng-bind-template=\"№ {{item.id}}\"></td>\n        <!-- name -->\n        <td>\n            <span editable-text=\"item.name\" ng-bind=\"item.name\" e-required onbeforesave=\"checkSave(item, $data, 'name')\"></span>\n        </td>\n        <!-- username -->\n        <td>\n            <span editable-text=\"item.username\" ng-bind=\"item.username\" e-required onbeforesave=\"checkSave(item, $data, 'username')\"></span>\n        </td>\n        <!-- email -->\n        <td>\n            <span editable-text=\"item.email\" ng-bind=\"item.email\" e-required onbeforesave=\"checkSave(item, $data, 'email')\"></span>\n        </td>\n        <!-- address -->\n        <td>\n            <p>\n                <span class=\"glyphicon glyphicon-globe\"></span>\n                <span editable-text=\"item.address.city\" ng-bind=\"item.address.city || 'empty'\" onbeforesave=\"checkSave(item, $data, 'city')\"></span>\n            </p>\n            <p>\n                <span class=\"glyphicon glyphicon-map-marker\"></span>\n                <span editable-text=\"item.address.street\" ng-bind=\"item.address.street || 'empty'\" onbeforesave=\"checkSave(item, $data, 'street')\"></span>\n            </p>\n            <p>\n                <span class=\"glyphicon glyphicon-map-marker\"></span>\n                <span editable-text=\"item.address.suite\" ng-bind=\"item.address.suite || 'empty'\" onbeforesave=\"checkSave(item, $data, 'suite')\"></span>\n            </p>\n            <p ng-cloak ng-if=\"!!item.address.long\">\n                <span class=\"glyphicon glyphicon-road\"></span>\n                <span ng-bind-template=\"{{item.address.long}} km\"></span>\n            </p>\n        </td>\n        <!-- phone -->\n        <td>\n            <span editable-text=\"item.phone\" ng-bind=\"item.phone || 'empty'\" onbeforesave=\"checkSave(item, $data, 'phone')\"></span>\n        </td>\n        <!-- website -->\n        <td>\n            <span editable-text=\"item.website\" ng-bind=\"item.website || 'empty'\" onbeforesave=\"checkSave(item, $data, 'website')\"></span>\n        </td>\n        <!-- company -->\n        <td>\n            <p>\n                <span class=\"glyphicon glyphicon-briefcase\"></span>\n                <span editable-text=\"item.company.name\" ng-bind=\"item.company.name\" e-required onbeforesave=\"checkSave(item, $data, 'companyName')\"></span>\n            </p>\n            <p>\n                <span class=\"glyphicon glyphicon-flag\"></span>\n                <span editable-text=\"item.company.bs\" ng-bind=\"item.company.bs || 'empty'\" onbeforesave=\"checkSave(item, $data, 'bs')\"></span>\n            </p>\n            <p>\n                <span class=\"glyphicon glyphicon-volume-up\"></span>\n                <span editable-text=\"item.company.catchPhrase\" ng-bind=\"item.company.catchPhrase || 'empty'\" onbeforesave=\"checkSave(item, $data, 'catchPhrase')\"></span>\n            </p>\n        </td>\n        <td>\n            <button class=\"btn btn-warning\" ng-click=\"removeUser(item)\"><span class=\"glyphicon glyphicon-remove\"></span></button>\n        </td>\n        <!-- last -->\n      </tr>\n      <tr ng-repeat-end ng-cloak ng-if=\"$last\" ng-init=\"message()\">\n          \n      </tr>\n    </tbody>\n  </table>\n\n\n\n";
 
 /***/ },
-/* 19 */
+/* 21 */
 /***/ function(module, exports, __webpack_require__) {
 
 	'use strict';
 
 	var _app = __webpack_require__(1);
 
-	var _mainCtrl = __webpack_require__(14);
+	var _mainCtrl = __webpack_require__(16);
 
 	var _mainCtrl2 = _interopRequireDefault(_mainCtrl);
 
-	var _filter = __webpack_require__(20);
+	var _filter = __webpack_require__(22);
 
 	var _filter2 = _interopRequireDefault(_filter);
 
@@ -34359,17 +34510,15 @@ var bundle =
 			replace: false,
 			controller: 'mainCtrl',
 			template: _filter2.default,
-			link: function link(scope, element, attributes) {
-				scope.d = 'filter';
-			}
+			link: function link(scope, element, attributes) {}
 		};
 		});
 
 /***/ },
-/* 20 */
+/* 22 */
 /***/ function(module, exports) {
 
-	module.exports = "<!-- <h3>Sort by:</h3> -->\n<h3>Search by..</h3>\n <form>\n    <div class=\"form-group\">\n      <div class=\"input-group\">\n        <div class=\"input-group-addon\"><i class=\"glyphicon glyphicon-search\"></i></div>\n        <input type=\"text\" class=\"form-control\" placeholder=\"Please start enter name/username/email\" ng-model=\"searchUser\">\n      </div>      \n    </div>\n  </form>\n<!-- <div class=\"btn-group\">\n\t<button class=\"btn btn-default\">Name</button>\n\t<button class=\"btn btn-default\">Userame</button>\n\t<button class=\"btn btn-primary\">Email</button>\n\t<button class=\"btn btn-success\">Address Street</button>\n\t<button class=\"btn btn-info\">Company Name</button>\n\t<button class=\"btn btn-warning\">A-z</button>\n\t<button class=\"btn btn-warning\">Z-a</button>\n</div> -->\n\n";
+	module.exports = "<h3>Search by..</h3>\n <form>\n    <div class=\"form-group\">\n      <div class=\"input-group\">\n        <div class=\"input-group-addon\"><i class=\"glyphicon glyphicon-search\"></i></div>\n        <input type=\"text\" class=\"form-control\" placeholder=\"Please start enter name/username/email\" ng-model=\"searchUser\">\n      </div>      \n    </div>\n  </form>\n\n";
 
 /***/ }
 /******/ ]);

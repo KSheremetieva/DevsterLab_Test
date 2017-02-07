@@ -1,59 +1,69 @@
-import angular from "angular";
-// import $ from 'jquery';
 import {app} from './app.js';
 
-app.run(function(editableOptions) {
-  editableOptions.theme = 'bs3'; // bootstrap3 theme. Can be also 'bs2', 'default'
-});
-
-app.controller('mainCtrl', function($scope, $localStorage, $sessionStorage, $filter, $http){
-	$scope.users;
-	$scope.show = 'userlist'
-	$scope.getData = () => {
-		$.ajax({
+app.controller('mainCtrl', function($scope, $localStorage, $sessionStorage, $filter, $http, geolocation){
+$scope.ifReopen = () => {
+// if reopen
+	if(!!$localStorage.userList){
+		$scope.users = $localStorage.userList;
+		$scope.myLat = $localStorage.myLatitude;
+		$scope.myLong = $localStorage.myLongitude;
+	}else{
+// if first time
+		$http({
 			method: 'GET',
-			dataType: 'json',
 			url: 'https://jsonplaceholder.typicode.com/users',
-		}).done(request=>$scope.getInfo(request))
-		.fail(request=>console.log('fail'));
-	}
-	$scope.getInfo = (request) => {
-		$scope.users = $localStorage.user || request;
-		$localStorage.user = $scope.users;
-		console.log($localStorage.user)
-		$scope.$apply()
-	}
+			}).then(
+				function success(response){
+					$localStorage.userList = response.data;
+					$scope.users = $localStorage.userList;
+					console.log($localStorage.userList);
+				},
+				function error(response){
+					console.log(response.statusText);
+				}
+			);
+		// GEO
+		$scope.R = 6371;
+		geolocation.getLocation().then(function(data){
+		    // $scope.coords = {lat:data.coords.latitude, long:data.coords.longitude};
+		    $localStorage.myLatitude = data.coords.latitude;
+		    $localStorage.myLongitude = data.coords.longitude;
+		    $scope.myLat = $localStorage.myLatitude;
+		    $scope.myLong = $localStorage.myLongitude;
+		    $scope.getLoc = true;
 
-	$scope.rowForm = true;
-	$scope.showBtn = () => {
-		$scope.rowForm = !$scope.rowForm;
-	}
-
-	// REMOVE USER
-	$scope.removeUser = (index) => {
-		console.log(index)
-		// $localStorage.user.splice(index, 1)
-		for(let i = 0; i<$localStorage.user.length; i++){
-			if($localStorage.user[i].id == index){
-				$localStorage.user.splice(i, 1)
+		    for(let i = 0; i<$localStorage.userList.length; i++){
+				let usLat = $localStorage.userList[i].address.geo.lat;
+				let usLong = $localStorage.userList[i].address.geo.lng;
+				let d = Math.acos( Math.sin($scope.myLong)*Math.sin(usLong) + Math.cos($scope.myLong)*Math.cos(usLong)*(Math.cos((usLat) - ($scope.myLat))) );
+				let L = Math.round( d*($scope.R) );
+				$localStorage.userList[i].address.long = L ;
+				$scope.longFlag = true;
 			}
-		}
+		});
 	}
+};
 
-	// ADD USER
- 	$scope.addUser = (newName, newUsername, newEmail, newAddrStreet, newAddrSuite, newAddrCity, newAddrZipcode, newPhone, newWebsite, newCompName, newCompCPhrase, newCompBS) => {
-  		$scope.allId = [];
-  		for(let i = 0; i<$localStorage.user.length; i++ ){
-  			$scope.allId.push($localStorage.user[i].id);
-  			console.log($scope.allId)
-  		}
-  		//определение мах id
-  		$scope.maxId = Math.max.apply(null, $scope.allId);
-  		$scope.newId = $scope.maxId +1;
-  		// console.log($scope.currentLength, $scope.maxId, $scope.newId)
-  	
+
+
+
+
+
+// SORT BY
+$scope.sortType = 'name';
+$scope.sortReverse = false;
+$scope.searchUser = '';
+$scope.sortBy = (arg) => {
+$scope.sortType = arg;
+$scope.sortReverse = !$scope.sortReverse;
+};
+
+// ADD USER
+$scope.addUser = (newName, newUsername, newEmail, newAddrStreet, newAddrSuite, newAddrCity, newAddrZipcode, newPhone, newWebsite, newCompName, newCompCPhrase, newCompBS) => {	
+  	// create currect id
+  	$localStorage.maxId += 1;
   	$scope.newUser = {
-  		id: $scope.newId,
+  		id: $localStorage.maxId,
 	      name: newName,
 	      username: newUsername,
 	      email: newEmail,
@@ -71,13 +81,103 @@ app.controller('mainCtrl', function($scope, $localStorage, $sessionStorage, $fil
 	      	bs: newCompBS,
 	      },
   	},
-  	$localStorage.user.push($scope.newUser)
-  }
+  	$localStorage.userList.push($scope.newUser)
+  };
 
-  // SORT TYPE
-  $scope.sortType = 'name'; // значение сортировки по умолчанию
-  $scope.sortReverse = false; // обратная сортривка
-  $scope.searchUser = ''; // значение поиска по умолчанию
-  
+// REMOVE USER
+$scope.removeUser = (arg) => {
+	console.log(arg);
+	for(let i = 0; i<$localStorage.userList.length; i++){
+		if($localStorage.userList[i] == arg){
+			$localStorage.userList.splice(i,1)
+		}
+	}
+};
+
+// CHANGE USER INFO
+$scope.checkSave = (item, data, arg) => {
+	console.log(item, data, arg);
+	if(arg == "username"){
+		for(let q = 0; q<$localStorage.userList.length; q++){
+			// check
+			if($localStorage.userList[q].username == data){
+				return 'Username should be unique!';
+			}else if($localStorage.userList[q].id == item.id){
+				$localStorage.userList[q].username = data;
+				return;
+			}
+		}
+	}
+	for(let i = 1; i<$localStorage.userList.length; i++){
+		// find item
+		if(item.id == $localStorage.userList[i].id){
+			// if address/company changes
+			if(arg == "username" || arg == "city" || arg == "street" || arg == "suite" || arg == "companyName" || arg == "bs" || arg == "catchPhrase"){
+				switch(arg){
+					case "username":
+						break;
+					// address
+					case "city":
+						$localStorage.userList[i].address.city = data;
+						break;
+					case "street":
+						$localStorage.userList[i].address.street = data;
+						break;
+					case "suite":
+						$localStorage.userList[i].address.suite = data;
+						break;
+					// company
+					case "companyName":
+						$localStorage.userList[i].company.name = data;
+						break;
+					case "bs":
+						$localStorage.userList[i].company.bs = data;
+						break;
+					case "catchPhrase": 
+						$localStorage.userList[i].company.catchPhrase = data;
+						break;
+					}
+			}else{
+				$localStorage.userList[i].arg = data;
+			}
+		}
+	}
+};
+
+// MESSAGE
+$scope.messageFlag = true;
+$scope.message = () => {
+	if(!!$scope.messageFlag){
+		$scope.messageFlag = false;
+		alert("All users have successfully downloaded");
+	};
+		// find max id
+		$sessionStorage.allId = [];
+		for(let i = 0; i<$localStorage.userList.length; i++){
+			$sessionStorage.allId.push($localStorage.userList[i].id);
+		}
+		$localStorage.maxId = Math.max.apply(null, $sessionStorage.allId);
+	};
+
+
+// UNIQUE USERNAME (IN ADD USER FORM)
+$scope.checkInput = (val) => {
+	console.log(val);
+	for(let i = 0; i<$localStorage.userList.length; i++){
+		// console.log($localStorage.userList[i].username)
+		if($localStorage.userList[i].username == val){
+			alert("da")
+			$scope.checkInp = true;
+			console.log(val);
+
+		}else{
+			$scope.checkInp = false;
+		}
+	}
+};
 
 });
+
+
+
+
